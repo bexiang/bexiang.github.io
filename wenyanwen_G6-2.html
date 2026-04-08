@@ -447,6 +447,11 @@
         <div class="card" id="settingsCard">
             <h2>选择课文</h2>
             <div class="pill-group" id="presetGroup"></div>
+            <div id="deleteBar" style="display:none; margin-bottom:16px;">
+                <button class="pill" style="background:#e74c3c;color:white;border-color:#e74c3c;" onclick="confirmDelete()">确认删除</button>
+                <button class="pill" onclick="cancelDelete()">取消</button>
+                <span id="deleteCount" style="margin-left:8px;color:#7f8c8d;font-size:14px;"></span>
+            </div>
             <div class="custom-input" id="customInput">
                 <input type="text" id="titleInput" placeholder="输入标题（如：学弈）">
                 <textarea id="textInput" placeholder="在此粘贴或输入文言文内容…"></textarea>
@@ -506,11 +511,6 @@
 
 <script>
 const presets = [
-    {
-        title: "\u7b2c\u4e8c\u6b21",
-        author: "\u672c\u672c",
-        text: "ahahhahg"
-    },
     {
         title: '学弈',
         author: '《孟子》',
@@ -619,8 +619,55 @@ function generateBlankMap(sentences) {
 function initPresetButtons() {
     const g = document.getElementById('presetGroup');
     g.innerHTML = presets.map((p, i) =>
-        `<button class="pill${i === 0 ? ' active' : ''}" onclick="selectPreset(${i},this)">${p.title}</button>`
-    ).join('') + '<button class="pill" onclick="selectCustom(this)">自定义</button>';
+        `<button class="pill${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="selectPreset(${i},this)">${p.title}</button>`
+    ).join('') + '<button class="pill" onclick="selectCustom(this)">自定义</button>' +
+    (presets.length > 0 ? '<button class="pill" style="border-color:#e74c3c;color:#e74c3c;" onclick="toggleDeleteMode()">管理课文</button>' : '');
+}
+
+let deleteMode = false;
+let deleteSet = new Set();
+
+function toggleDeleteMode() {
+    deleteMode = true;
+    deleteSet.clear();
+    const g = document.getElementById('presetGroup');
+    g.querySelectorAll('.pill[data-idx]').forEach(btn => {
+        const idx = parseInt(btn.dataset.idx);
+        btn.outerHTML = `<label style="display:inline-flex;align-items:center;gap:4px;margin:4px 0;cursor:pointer;font-size:15px;color:#2d3436;">
+            <input type="checkbox" value="${idx}" onchange="toggleDeleteItem(this)"> ${presets[idx].title}</label>`;
+    });
+    document.getElementById('deleteBar').style.display = 'flex';
+    document.getElementById('deleteBar').style.alignItems = 'center';
+    document.getElementById('deleteBar').style.gap = '8px';
+    updateDeleteCount();
+}
+
+function toggleDeleteItem(cb) {
+    const idx = parseInt(cb.value);
+    if (cb.checked) deleteSet.add(idx); else deleteSet.delete(idx);
+    updateDeleteCount();
+}
+
+function updateDeleteCount() {
+    document.getElementById('deleteCount').textContent = deleteSet.size > 0 ? `已选 ${deleteSet.size} 项` : '';
+}
+
+function confirmDelete() {
+    if (deleteSet.size === 0) { alert('请先选择要删除的课文'); return; }
+    if (!confirm(`确定删除 ${deleteSet.size} 篇课文？`)) return;
+    const sorted = [...deleteSet].sort((a, b) => b - a);
+    for (const i of sorted) presets.splice(i, 1);
+    deleteMode = false;
+    deleteSet.clear();
+    document.getElementById('deleteBar').style.display = 'none';
+    initPresetButtons();
+}
+
+function cancelDelete() {
+    deleteMode = false;
+    deleteSet.clear();
+    document.getElementById('deleteBar').style.display = 'none';
+    initPresetButtons();
 }
 
 function selectPreset(i, btn) {
