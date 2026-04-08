@@ -512,11 +512,6 @@
 <script>
 const presets = [
     {
-        title: "v3",
-        author: "\u54c8\u54c8",
-        text: "v3"
-    },
-    {
         title: '学弈',
         author: '《孟子》',
         text: '弈秋，通国之善弈者也。使弈秋诲二人弈，其一人专心致志，惟弈秋之为听；一人虽听之，一心以为有鸿鹄将至，思援弓缴而射之。虽与之俱学，弗若之矣。为是其智弗若与？曰：非然也。'
@@ -532,6 +527,15 @@ const presets = [
         text: '孔子东游，见两小儿辩斗，问其故。一儿曰："我以日始出时去人近，而日中时远也。"一儿曰："我以日初出远，而日中时近也。"一儿曰："日初出大如车盖，及日中则如盘盂，此不为远者小而近者大乎？"一儿曰："日初出沧沧凉凉，及其日中如探汤，此不为近者热而远者凉乎？"孔子不能决也。两小儿笑曰："孰为汝多知乎？"'
     }
 ];
+
+// Filter out previously deleted presets
+(function() {
+    const deleted = JSON.parse(localStorage.getItem('deletedTitles') || '[]');
+    const toRemove = new Set(deleted);
+    for (let i = presets.length - 1; i >= 0; i--) {
+        if (toRemove.has(presets[i].title)) presets.splice(i, 1);
+    }
+})();
 
 const CLAUSE_ENDERS = '，。！？；、';
 const CLOSING_QUOTES = '\u201D\u2019\u300D\u300F';
@@ -660,8 +664,13 @@ function updateDeleteCount() {
 function confirmDelete() {
     if (deleteSet.size === 0) { alert('请先选择要删除的课文'); return; }
     if (!confirm(`确定删除 ${deleteSet.size} 篇课文？`)) return;
+    const deleted = JSON.parse(localStorage.getItem('deletedTitles') || '[]');
     const sorted = [...deleteSet].sort((a, b) => b - a);
-    for (const i of sorted) presets.splice(i, 1);
+    for (const i of sorted) {
+        deleted.push(presets[i].title);
+        presets.splice(i, 1);
+    }
+    localStorage.setItem('deletedTitles', JSON.stringify(deleted));
     deleteMode = false;
     deleteSet.clear();
     document.getElementById('deleteBar').style.display = 'none';
